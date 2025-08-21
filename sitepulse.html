@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>SitePulse - Website Audit Tool (Enhanced)</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+	<style>
+		:root {
+			--bg-gradient-start: #667eea;
+			--bg-gradient-end: #764ba2;
+			--text-primary: #333333;
+			--text-secondary: #666666;
+			--card-bg: rgba(255,255,255,0.1);
+			--card-border: rgba(255,255,255,0.2);
+			--panel-bg: #ffffff;
+			--muted-bg: #f8f9fa;
+			--muted-border: #eeeeee;
+			--shadow-rgb: 0,0,0;
+			--score-security: #ff6b6b;
+			--score-performance: #4CAF50;
+			--score-seo: #2196F3;
+			--score-a11y: #FF9800;
+		}
+
+		[data-theme="dark"] {
+			--bg-gradient-start: #0f172a;
+			--bg-gradient-end: #1e293b;
+			--text-primary: #e5e7eb;
+			--text-secondary: #a1a1aa;
+			--card-bg: rgba(255,255,255,0.06);
+			--card-border: rgba(255,255,255,0.12);
+			--panel-bg: #0b1020;
+			--muted-bg: #0f172a;
+			--muted-border: #1f2937;
+			--shadow-rgb: 0,0,0;
+		}
+
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		body {
+			font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+			background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+			min-height: 100vh; color: var(--text-primary);
+		}
+		.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+		/* Landing */
+		.landing-page { text-align: center; padding: 60px 20px; color: white; }
+		.hero-title { font-size: 3.5rem; font-weight: 700; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(var(--shadow-rgb),0.3); animation: fadeInUp 1s ease-out; }
+		.hero-subtitle { font-size: 1.3rem; margin-bottom: 40px; opacity: 0.9; animation: fadeInUp 1s ease-out 0.2s both; }
+		.url-input-container { background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 20px; padding: 40px; margin: 40px auto; max-width: 600px; box-shadow: 0 20px 40px rgba(var(--shadow-rgb),0.1); animation: fadeInUp 1s ease-out 0.4s both; }
+		.url-input { width: 100%; padding: 18px 25px; font-size: 1.1rem; border: none; border-radius: 50px; margin-bottom: 20px; background: white; box-shadow: 0 10px 30px rgba(var(--shadow-rgb),0.1); outline: none; transition: all 0.3s ease; }
+		.url-input:focus { transform: translateY(-2px); box-shadow: 0 15px 35px rgba(var(--shadow-rgb),0.15); }
+		.controls-row { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+		.btn { border: none; padding: 12px 22px; font-size: 1rem; font-weight: 600; border-radius: 50px; cursor: pointer; transition: all 0.3s ease; }
+		.audit-btn { background: linear-gradient(45deg, #ff6b6b, #ff8e8e); color: white; box-shadow: 0 10px 30px rgba(255,107,107,0.3); }
+		.audit-btn:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(255,107,107,0.4); }
+		.secondary-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); }
+		.secondary-btn:hover { transform: translateY(-2px); }
+
+		.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-top: 60px; animation: fadeInUp 1s ease-out 0.6s both; }
+		.feature-card { background: var(--card-bg); backdrop-filter: blur(10px); border-radius: 15px; padding: 30px; text-align: center; transition: all 0.3s ease; border: 1px solid var(--card-border); color: white; }
+		.feature-card:hover { transform: translateY(-10px); background: rgba(255,255,255,0.2); }
+		.feature-icon { font-size: 3rem; margin-bottom: 15px; display: block; }
+
+		/* Dashboard */
+		.dashboard { display: none; background: var(--panel-bg); min-height: 100vh; padding: 20px 0; }
+		.dashboard-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; position: relative; overflow: hidden; }
+		.dashboard-header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>'); background-size: 30px 30px; }
+		.header-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+		.progress-container { margin: 20px 0 0 0; }
+		.progress-bar { width: 100%; height: 12px; background: rgba(255,255,255,0.2); border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
+		.progress-fill { height: 100%; background: linear-gradient(45deg, #4CAF50, #8BC34A); width: 0%; transition: width 1s ease; border-radius: 6px; }
+
+		.scores-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+		.score-card { background: var(--panel-bg); border-radius: 15px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(var(--shadow-rgb),0.1); transition: all 0.3s ease; position: relative; overflow: hidden; border: 1px solid var(--muted-border); }
+		.score-card:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(var(--shadow-rgb),0.15); }
+		.score-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+		.security-card::before { background: linear-gradient(45deg, var(--score-security), #ff8e8e); }
+		.performance-card::before { background: linear-gradient(45deg, var(--score-performance), #8BC34A); }
+		.seo-card::before { background: linear-gradient(45deg, var(--score-seo), #64B5F6); }
+		.accessibility-card::before { background: linear-gradient(45deg, var(--score-a11y), #FFB74D); }
+		.score-number { font-size: 3rem; font-weight: bold; margin-bottom: 10px; }
+		.score-label { color: var(--text-secondary); font-weight: 600; }
+
+		.chart-container { margin: 30px 0; height: 360px; }
+		.chart-row { display: grid; grid-template-columns: 1fr; gap: 20px; }
+
+		.issues-section { background: var(--panel-bg); border-radius: 15px; padding: 20px; margin-top: 20px; box-shadow: 0 10px 30px rgba(var(--shadow-rgb),0.1); border: 1px solid var(--muted-border); }
+		.issues-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+		.input { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--muted-border); background: var(--panel-bg); color: var(--text-primary); }
+		.select { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--muted-border); background: var(--panel-bg); color: var(--text-primary); }
+		.export-btn { background: linear-gradient(45deg, #2196F3, #64B5F6); color: white; border: none; padding: 12px 16px; border-radius: 25px; cursor: pointer; margin: 6px 4px; transition: all 0.3s ease; font-weight: 600; }
+		.export-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(33,150,243,0.3); }
+
+		.issue-item { padding: 16px; border-radius: 10px; margin: 12px 0; border-left: 4px solid; background: var(--muted-bg); transition: all 0.3s ease; cursor: pointer; }
+		.issue-item:hover { transform: translateX(5px); box-shadow: 0 5px 20px rgba(var(--shadow-rgb),0.1); }
+		.issue-critical { border-left-color: #ff6b6b; }
+		.issue-moderate { border-left-color: #FF9800; }
+		.issue-low { border-left-color: #4CAF50; }
+		.issue-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+		.severity-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-left: auto; }
+		.severity-critical { background: #ffebee; color: #c62828; }
+		.severity-moderate { background: #fff3e0; color: #ef6c00; }
+		.severity-low { background: #e8f5e8; color: #2e7d32; }
+		.issue-details { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--muted-border); }
+		.fix-suggestion { background: rgba(76,175,80,0.07); border: 1px solid var(--score-performance); border-radius: 8px; padding: 12px; margin-top: 8px; }
+		.code-snippet { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9rem; margin: 10px 0; overflow-x: auto; white-space: pre-wrap; position: relative; }
+		.copy-btn { position: absolute; top: 8px; right: 8px; padding: 6px 10px; border-radius: 8px; font-size: 0.8rem; border: 1px solid #444; background: #2d2d2d; color: #eee; cursor: pointer; }
+
+		.loading-spinner { display: none; justify-content: center; align-items: center; height: 160px; }
+		.spinner { width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; }
+
+		.back-btn { background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; margin-bottom: 20px; transition: all 0.3s ease; }
+		.back-btn:hover { background: #5a6268; transform: translateY(-2px); }
+
+		.hidden { display: none !important; }
+		.show { display: block !important; }
+
+		.history-section { background: var(--panel-bg); border-radius: 15px; padding: 20px; margin-top: 20px; box-shadow: 0 10px 30px rgba(var(--shadow-rgb),0.1); border: 1px solid var(--muted-border); }
+		.history-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+		.history-table { width: 100%; border-collapse: collapse; }
+		.history-table th, .history-table td { padding: 10px; border-bottom: 1px solid var(--muted-border); text-align: left; }
+		.history-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+		.qr-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; }
+		.qr-dialog { background: var(--panel-bg); border: 1px solid var(--muted-border); padding: 20px; border-radius: 12px; min-width: 280px; color: var(--text-primary); }
+
+		.theme-switch { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; border-radius: 999px; padding: 8px 12px; cursor: pointer; }
+
+		@keyframes fadeInUp { from { opacity: 0; transform: translateY(30px);} to { opacity: 1; transform: translateY(0);} }
+		@keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
+		@media (max-width: 768px) {
+			.hero-title { font-size: 2.5rem; }
+			.features-grid { grid-template-columns: 1fr; }
+			.scores-grid { grid-template-columns: repeat(2, 1fr); }
+		}
+	</style>
+</head>
+<body>
+	<a href="#dashboard" style="position:absolute;left:-999px;top:auto;width:1px;height:1px;overflow:hidden;">Skip to content</a>
+	<!-- Landing Page -->
+	<div id="landingPage" class="landing-page">
+		<div class="container">
+			<h1 class="hero-title">SitePulse</h1>
+			<p class="hero-subtitle">Complete Website Health Check in Seconds</p>
+			<div class="url-input-container">
+				<input type="url" id="websiteUrl" class="url-input" placeholder="Enter website URL (e.g., https://example.com)" required>
+				<div class="controls-row">
+					<button onclick="startAudit()" class="btn audit-btn">🚀 Start Audit</button>
+					<button id="themeToggle" class="btn secondary-btn theme-switch">🌙 Toggle Dark</button>
+				</div>
+			</div>
+			<div class="features-grid">
+				<div class="feature-card">
+					<span class="feature-icon">🛡️</span>
+					<h3>Security Scanner</h3>
+					<p>Detect vulnerabilities, SSL issues, and security headers</p>
+				</div>
+				<div class="feature-card">
+					<span class="feature-icon">⚡</span>
+					<h3>Performance Analyzer</h3>
+					<p>Load times, Core Web Vitals, and optimization tips</p>
+				</div>
+				<div class="feature-card">
+					<span class="feature-icon">📈</span>
+					<h3>SEO Checker</h3>
+					<p>Meta tags, sitemap, robots.txt, and keyword analysis</p>
+				</div>
+				<div class="feature-card">
+					<span class="feature-icon">♿</span>
+					<h3>Accessibility Audit</h3>
+					<p>WCAG compliance, contrast checks, and screen reader compatibility</p>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Dashboard -->
+	<div id="dashboard" class="dashboard">
+		<div class="container">
+			<button onclick="goBack()" class="back-btn">← Back to Home</button>
+			<div class="dashboard-header">
+				<h2>Website Audit Results</h2>
+				<p id="auditedUrl">Analyzing: </p>
+				<div class="header-actions">
+					<button class="export-btn" onclick="shareSummary()">📤 Share</button>
+					<button class="export-btn" onclick="openQrModal()">🔳 QR</button>
+				</div>
+				<div class="progress-container">
+					<div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+					<p id="progressText">Initializing scan...</p>
+				</div>
+			</div>
+
+			<div class="loading-spinner" id="loadingSpinner"><div class="spinner"></div></div>
+
+			<div id="resultsContent" class="hidden">
+				<div class="scores-grid">
+					<div class="score-card security-card"><div class="score-number" id="securityScore">--</div><div class="score-label">Security Score</div></div>
+					<div class="score-card performance-card"><div class="score-number" id="performanceScore">--</div><div class="score-label">Performance Score</div></div>
+					<div class="score-card seo-card"><div class="score-number" id="seoScore">--</div><div class="score-label">SEO Score</div></div>
+					<div class="score-card accessibility-card"><div class="score-number" id="accessibilityScore">--</div><div class="score-label">Accessibility Score</div></div>
+				</div>
+
+				<div class="chart-row">
+					<div class="chart-container"><canvas id="scoresChart"></canvas></div>
+					<div class="chart-container"><canvas id="trendChart"></canvas></div>
+				</div>
+
+				<div class="issues-section">
+					<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap;">
+						<h3>Issues & Recommendations</h3>
+						<div>
+							<button onclick="exportReport('pdf')" class="export-btn">📄 Export PDF</button>
+							<button onclick="exportReport('csv')" class="export-btn">📊 Export CSV</button>
+							<button onclick="exportReport('png')" class="export-btn">🖼️ Export PNG</button>
+							<button onclick="exportReport('json')" class="export-btn">🧾 Export JSON</button>
+						</div>
+					</div>
+					<div class="issues-toolbar">
+						<input id="searchInput" class="input" placeholder="Search issues..." oninput="applyIssueFilters()" />
+						<select id="severityFilter" class="select" onchange="applyIssueFilters()">
+							<option value="all">All severities</option>
+							<option value="critical">Critical</option>
+							<option value="moderate">Moderate</option>
+							<option value="low">Low</option>
+						</select>
+						<select id="categoryFilter" class="select" onchange="applyIssueFilters()">
+							<option value="all">All categories</option>
+							<option value="Security">Security</option>
+							<option value="Performance">Performance</option>
+							<option value="SEO">SEO</option>
+							<option value="Accessibility">Accessibility</option>
+						</select>
+					</div>
+					<div id="issuesList"></div>
+				</div>
+
+				<div class="history-section">
+					<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+						<h3>Audit History</h3>
+						<div class="history-actions">
+							<select id="historyUrlFilter" class="select" onchange="renderHistory()"></select>
+							<button class="export-btn" onclick="clearHistory()">🗑️ Clear History</button>
+						</div>
+					</div>
+					<div class="history-grid">
+						<table class="history-table" id="historyTable"></table>
+						<div class="chart-container"><canvas id="historyChart"></canvas></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="qrModal" class="qr-modal" onclick="closeQrModal(event)">
+		<div class="qr-dialog">
+			<h3 style="margin-bottom:10px;">Share URL via QR</h3>
+			<div id="qrContainer" style="display:flex;justify-content:center;margin:10px 0;"></div>
+			<div style="display:flex;justify-content:flex-end;gap:8px;">
+				<button class="btn secondary-btn" onclick="closeQrModal()">Close</button>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		let auditData = {};
+		let currentChart = null;
+		let trendChart = null;
+		let historyChart = null;
+		let currentUrl = '';
+		let cachedIssues = [];
+
+		function getTheme() { return localStorage.getItem('sitepulse_theme') || 'light'; }
+		function setTheme(theme) { document.documentElement.setAttribute('data-theme', theme); localStorage.setItem('sitepulse_theme', theme); }
+
+		document.addEventListener('DOMContentLoaded', () => {
+			setTheme(getTheme());
+			document.getElementById('themeToggle').addEventListener('click', () => {
+				const next = getTheme() === 'light' ? 'dark' : 'light';
+				setTheme(next);
+			});
+			const urlInput = document.getElementById('websiteUrl');
+			urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') startAudit(); });
+			renderHistory();
+		});
+
+		function escapeHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+		function startAudit() {
+			const urlInput = document.getElementById('websiteUrl');
+			let url = urlInput.value.trim();
+			if (!url) { alert('Please enter a valid URL'); return; }
+			if (!url.startsWith('http://') && !url.startsWith('https://')) { url = 'https://' + url; urlInput.value = url; }
+			currentUrl = url;
+			// Switch UI
+			document.getElementById('landingPage').style.display = 'none';
+			document.getElementById('dashboard').style.display = 'block';
+			document.getElementById('auditedUrl').textContent = 'Analyzing: ' + url;
+			// Start simulation
+			simulateAudit();
+		}
+
+		function simulateAudit() {
+			const progressFill = document.getElementById('progressFill');
+			const progressText = document.getElementById('progressText');
+			const loadingSpinner = document.getElementById('loadingSpinner');
+			const resultsContent = document.getElementById('resultsContent');
+			loadingSpinner.style.display = 'flex';
+			resultsContent.classList.add('hidden');
+			const stages = [
+				'Checking SSL certificate...', 'Analyzing security headers...', 'Measuring page load time...', 'Checking Core Web Vitals...', 'Analyzing SEO meta tags...', 'Checking accessibility compliance...', 'Generating recommendations...', 'Finalizing report...'
+			];
+			let currentStage = 0;
+			const interval = setInterval(() => {
+				if (currentStage < stages.length) {
+					progressText.textContent = stages[currentStage];
+					progressFill.style.width = ((currentStage + 1) / stages.length) * 100 + '%';
+					currentStage++;
+				} else {
+					clearInterval(interval);
+					progressText.textContent = 'Audit complete!';
+					setTimeout(() => { loadingSpinner.style.display = 'none'; showResults(); }, 800);
+				}
+			}, 700);
+		}
+
+		function showResults() {
+			auditData = generateAuditData();
+			cachedIssues = collectAllIssues(auditData);
+			// Update scores
+			document.getElementById('securityScore').textContent = auditData.security.score;
+			document.getElementById('performanceScore').textContent = auditData.performance.score;
+			document.getElementById('seoScore').textContent = auditData.seo.score;
+			document.getElementById('accessibilityScore').textContent = auditData.accessibility.score;
+			// Charts
+			createScoresChart();
+			createTrendChart();
+			// Issues
+			generateIssuesList(cachedIssues);
+			// History
+			saveAuditToHistory(currentUrl, auditData);
+			renderHistory();
+			// Show
+			document.getElementById('resultsContent').classList.remove('hidden');
+		}
+
+		function generateAuditData() {
+			const securityScore = Math.floor(Math.random() * 30) + 65;
+			const performanceScore = Math.floor(Math.random() * 40) + 55;
+			const seoScore = Math.floor(Math.random() * 35) + 60;
+			const accessibilityScore = Math.floor(Math.random() * 45) + 50;
+			return {
+				security: { score: securityScore, issues: [
+					{ title: 'Missing Security Headers', severity: 'critical', description: 'Your website is missing important security headers like X-Frame-Options and Content-Security-Policy.', impact: 'This makes your site vulnerable to clickjacking and XSS attacks.', fix: 'Add security headers to your web server configuration.', code: `# Add to .htaccess or server config\nHeader always set X-Frame-Options "SAMEORIGIN"\nHeader always set X-Content-Type-Options "nosniff"\nHeader always set Content-Security-Policy "default-src 'self'"` },
+					{ title: 'SSL Certificate Expiring Soon', severity: 'moderate', description: 'Your SSL certificate will expire in 28 days.', impact: 'Users will see security warnings when the certificate expires.', fix: 'Renew your SSL certificate before expiration.', code: '# Check certificate expiration\\necho | openssl s_client -connect example.com:443 2>/dev/null | openssl x509 -noout -dates' }
+				]},
+				performance: { score: performanceScore, issues: [
+					{ title: 'Large Images Not Optimized', severity: 'critical', description: 'Several images are larger than 500KB and not compressed.', impact: 'Slow page load times, especially on mobile devices.', fix: 'Compress images and use modern formats like WebP.', code: `<!-- Use responsive images -->\n<img src="image-small.webp"\n     srcset="image-small.webp 480w, image-large.webp 800w"\n     sizes="(max-width: 480px) 480px, 800px"\n     alt="Description">` },
+					{ title: 'Unused CSS and JavaScript', severity: 'moderate', description: '45% of CSS and 32% of JavaScript is unused.', impact: 'Slower page loading and increased bandwidth usage.', fix: 'Remove unused code and implement code splitting.', code: '// Use dynamic imports for code splitting\\nconst module = await import("./heavy-feature.js");' }
+				]},
+				seo: { score: seoScore, issues: [
+					{ title: 'Missing Meta Description', severity: 'critical', description: 'Several pages are missing meta descriptions.', impact: 'Poor search engine visibility and click-through rates.', fix: 'Add unique, descriptive meta descriptions to all pages.', code: '<meta name="description" content="Compelling page description under 160 characters">' },
+					{ title: 'No XML Sitemap Found', severity: 'moderate', description: 'No XML sitemap detected at common locations.', impact: 'Search engines may have difficulty indexing your content.', fix: 'Create and submit an XML sitemap to search engines.', code: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>https://example.com/</loc>\n    <lastmod>2024-01-01</lastmod>\n    <priority>1.0</priority>\n  </url>\n</urlset>` }
+				]},
+				accessibility: { score: accessibilityScore, issues: [
+					{ title: 'Images Missing Alt Text', severity: 'critical', description: '12 images are missing alternative text.', impact: 'Screen readers cannot describe images to visually impaired users.', fix: 'Add descriptive alt attributes to all images.', code: '<img src="chart.png" alt="Sales increased 25% from Q1 to Q2 2024">' },
+					{ title: 'Low Color Contrast', severity: 'moderate', description: 'Text contrast ratio is 3.2:1, below WCAG AA standard.', impact: 'Text may be difficult to read for users with visual impairments.', fix: 'Increase contrast between text and background colors.', code: `/* Improve contrast */\n.text {\n  color: #333333; /* Dark gray instead of light gray */\n  background: #ffffff;\n}` }
+				]}
+			};
+		}
+
+		function createScoresChart() {
+			const ctx = document.getElementById('scoresChart').getContext('2d');
+			if (currentChart) currentChart.destroy();
+			currentChart = new Chart(ctx, {
+				type: 'doughnut',
+				data: {
+					labels: ['Security', 'Performance', 'SEO', 'Accessibility'],
+					datasets: [{ data: [ auditData.security.score, auditData.performance.score, auditData.seo.score, auditData.accessibility.score ], backgroundColor: ['#ff6b6b', '#4CAF50', '#2196F3', '#FF9800'], borderWidth: 0, cutout: '60%' }]
+				},
+				options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true, font: { size: 14, weight: 'bold' } } }, tooltip: { callbacks: { label: (c) => c.label + ': ' + c.parsed + '/100' } } }, animation: { animateRotate: true, duration: 2000 } }
+			});
+		}
+
+		function createTrendChart() {
+			const ctx = document.getElementById('trendChart').getContext('2d');
+			if (trendChart) trendChart.destroy();
+			const history = getHistory().filter(h => h.url === currentUrl).slice(-10);
+			const labels = history.map(h => new Date(h.timestamp).toLocaleTimeString());
+			const dataset = (key, color) => ({ label: key, data: history.map(h => h.scores[key]), borderColor: color, backgroundColor: color + '40', tension: 0.3, fill: false });
+			trendChart = new Chart(ctx, {
+				type: 'line',
+				data: { labels, datasets: [ dataset('security', '#ff6b6b'), dataset('performance', '#4CAF50'), dataset('seo', '#2196F3'), dataset('accessibility', '#FF9800') ] },
+				options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { suggestedMin: 0, suggestedMax: 100 } } }
+			});
+		}
+
+		function collectAllIssues(ad) {
+			return [
+				...ad.security.issues.map(i => ({...i, category: 'Security'})),
+				...ad.performance.issues.map(i => ({...i, category: 'Performance'})),
+				...ad.seo.issues.map(i => ({...i, category: 'SEO'})),
+				...ad.accessibility.issues.map(i => ({...i, category: 'Accessibility'}))
+			].sort((a,b) => ({critical:0,moderate:1,low:2}[a.severity]-({critical:0,moderate:1,low:2}[b.severity]));
+		}
+
+		function generateIssuesList(issues) {
+			const issuesList = document.getElementById('issuesList');
+			issuesList.innerHTML = '';
+			issues.forEach((issue, index) => {
+				const div = document.createElement('div');
+				div.className = `issue-item issue-${issue.severity}`;
+				div.innerHTML = `
+					<div class=\"issue-header\">
+						<h4>${issue.title}</h4>
+						<span class=\"severity-badge severity-${issue.severity}\">${issue.severity.toUpperCase()}</span>
+					</div>
+					<p><strong>Category:</strong> ${issue.category}</p>
+					<div class=\"issue-details\" id=\"details-${index}\">
+						<p><strong>Description:</strong> ${issue.description}</p>
+						<p><strong>Impact:</strong> ${issue.impact}</p>
+						<div class=\"fix-suggestion\">
+							<strong>Recommended Fix:</strong> ${issue.fix}
+							<div class=\"code-snippet\"><button class=\"copy-btn\" data-code-index=\"${index}\">Copy</button>${escapeHtml(issue.code)}</div>
+						</div>
+					</div>
+				`;
+				div.addEventListener('click', (e) => {
+					// prevent toggle when clicking copy
+					if ((e.target).classList.contains('copy-btn')) return;
+					const details = document.getElementById(`details-${index}`);
+					details.style.display = details.style.display === 'block' ? 'none' : 'block';
+				});
+				issuesList.appendChild(div);
+			});
+			// wire copy buttons
+			issuesList.querySelectorAll('.copy-btn').forEach(btn => {
+				btn.addEventListener('click', (e) => {
+					e.stopPropagation();
+					const parent = btn.parentElement;
+					const codeText = parent.textContent.replace(/^Copy/, '');
+					navigator.clipboard.writeText(codeText).then(() => { btn.textContent = 'Copied!'; setTimeout(()=> btn.textContent = 'Copy', 1200); });
+				});
+			});
+		}
+
+		function applyIssueFilters() {
+			const q = document.getElementById('searchInput').value.toLowerCase();
+			const sev = document.getElementById('severityFilter').value;
+			const cat = document.getElementById('categoryFilter').value;
+			const filtered = cachedIssues.filter(i => {
+				const matchText = [i.title, i.description, i.impact, i.fix].join(' ').toLowerCase().includes(q);
+				const matchSev = sev === 'all' ? true : i.severity === sev;
+				const matchCat = cat === 'all' ? true : i.category === cat;
+				return matchText && matchSev && matchCat;
+			});
+			generateIssuesList(filtered);
+		}
+
+		function exportReport(format) {
+			const results = document.getElementById('resultsContent');
+			if (format === 'csv') {
+				let csvContent = 'Category,Issue,Severity,Description,Impact,Fix\n';
+				collectAllIssues(auditData).forEach(issue => {
+					csvContent += `"${issue.category}","${issue.title}","${issue.severity}","${issue.description}","${issue.impact}","${issue.fix}"\n`;
+				});
+				const blob = new Blob([csvContent], { type: 'text/csv' });
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a'); a.href = url; a.download = 'sitepulse-audit-report.csv'; document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+			} else if (format === 'json') {
+				const payload = { url: currentUrl, timestamp: Date.now(), auditData };
+				const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a'); a.href = url; a.download = 'sitepulse-audit-report.json'; document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+			} else if (format === 'png' || format === 'pdf') {
+				html2canvas(results, { scale: 2 }).then(canvas => {
+					const imgData = canvas.toDataURL('image/png');
+					if (format === 'png') {
+						const a = document.createElement('a'); a.href = imgData; a.download = 'sitepulse-dashboard.png'; a.click();
+					} else {
+						const { jsPDF } = window.jspdf;
+						const pdf = new jsPDF('p', 'mm', 'a4');
+						const pageWidth = pdf.internal.pageSize.getWidth();
+						const pageHeight = pdf.internal.pageSize.getHeight();
+						const imgWidth = pageWidth;
+						const imgHeight = canvas.height * imgWidth / canvas.width;
+						let position = 0;
+						pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+						// handle overflow
+						let heightLeft = imgHeight - pageHeight;
+						while (heightLeft > 0) {
+							position = heightLeft - imgHeight;
+							pdf.addPage();
+							pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+							heightLeft -= pageHeight;
+						}
+						pdf.save('sitepulse-audit-report.pdf');
+					}
+				});
+			}
+		}
+
+		function goBack() {
+			document.getElementById('dashboard').style.display = 'none';
+			document.getElementById('landingPage').style.display = 'block';
+			document.getElementById('websiteUrl').value = '';
+		}
+
+		// History utilities
+		function getHistory() { try { return JSON.parse(localStorage.getItem('sitepulse_history') || '[]'); } catch { return []; } }
+		function setHistory(list) { localStorage.setItem('sitepulse_history', JSON.stringify(list)); }
+		function saveAuditToHistory(url, ad) {
+			const list = getHistory();
+			list.push({ url, timestamp: Date.now(), scores: { security: ad.security.score, performance: ad.performance.score, seo: ad.seo.score, accessibility: ad.accessibility.score } });
+			setHistory(list);
+		}
+		function clearHistory() { if (!confirm('Clear all audit history?')) return; setHistory([]); renderHistory(); }
+
+		function renderHistory() {
+			const list = getHistory();
+			const urlSelect = document.getElementById('historyUrlFilter');
+			const table = document.getElementById('historyTable');
+			const urls = Array.from(new Set(list.map(i => i.url)));
+			urlSelect.innerHTML = '<option value="all">All URLs</option>' + urls.map(u => `<option value="${u}">${u}</option>`).join('');
+			const chosen = urlSelect.value || 'all';
+			const filtered = chosen === 'all' ? list : list.filter(i => i.url === chosen);
+			table.innerHTML = `
+				<thead><tr><th>When</th><th>URL</th><th>Security</th><th>Perf</th><th>SEO</th><th>A11y</th></tr></thead>
+				<tbody>
+					${filtered.slice().reverse().map(r => `<tr><td>${new Date(r.timestamp).toLocaleString()}</td><td>${r.url}</td><td>${r.scores.security}</td><td>${r.scores.performance}</td><td>${r.scores.seo}</td><td>${r.scores.accessibility}</td></tr>`).join('')}
+				</tbody>`;
+			// Chart
+			const ctx = document.getElementById('historyChart').getContext('2d');
+			if (historyChart) historyChart.destroy();
+			const last = filtered.slice(-10);
+			const labels = last.map(r => new Date(r.timestamp).toLocaleTimeString());
+			historyChart = new Chart(ctx, { type: 'radar', data: { labels: ['Security', 'Performance', 'SEO', 'Accessibility'], datasets: last.map((r, idx) => ({ label: new Date(r.timestamp).toLocaleTimeString(), data: [r.scores.security, r.scores.performance, r.scores.seo, r.scores.accessibility], backgroundColor: `hsla(${(idx*40)%360}, 70%, 50%, 0.15)`, borderColor: `hsl(${(idx*40)%360}, 70%, 50%)` })) }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { r: { suggestedMin: 0, suggestedMax: 100 } } } });
+		}
+
+		// Sharing & QR
+		function shareSummary() {
+			const text = `SitePulse results for ${currentUrl}: Security ${auditData.security?.score ?? '-'}, Performance ${auditData.performance?.score ?? '-'}, SEO ${auditData.seo?.score ?? '-'}, Accessibility ${auditData.accessibility?.score ?? '-'}.`;
+			const shareData = { title: 'SitePulse Audit', text, url: window.location.href };
+			if (navigator.share) { navigator.share(shareData).catch(()=>{}); }
+			else { navigator.clipboard.writeText(text + '\n' + shareData.url); alert('Summary copied to clipboard.'); }
+		}
+		function openQrModal() {
+			const modal = document.getElementById('qrModal');
+			modal.style.display = 'flex';
+			const container = document.getElementById('qrContainer');
+			container.innerHTML = '';
+			new QRCode(container, { text: currentUrl || window.location.href, width: 180, height: 180 });
+		}
+		function closeQrModal(e) { if (e && e.target && e.target.id === 'qrModal') { document.getElementById('qrModal').style.display = 'none'; return; } document.getElementById('qrModal').style.display = 'none'; }
+	</script>
+</body>
+</html>
